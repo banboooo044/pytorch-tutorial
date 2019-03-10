@@ -13,21 +13,31 @@ class MultiLayerNet(nn.Module):
     '''
     全結合の多層ニューラルネットワーク
     '''
-    def __init__(self,input_size,hidden_size,output_size,use_dropout = False,dropout_ration = 0.5):
+    def __init__(self, input_size, hidden_layer_size_list, output_size,use_batch_norm = False,use_dropout = False, dropout_ration = 0.5):
         super(MultiLayerNet, self).__init__()
         # bias : default True
-        self.layer1 = nn.Linear(input_size,hidden_size)
-        self.layer2 = nn.Linear(hidden_size,output_size)
+        self.front_layer_size_list = [ input_size ] + hidden_layer_size_list
+        self.front_layer_num = len(self.front_layer_size_list)
+        self.layers = nn.ModuleList([ nn.Linear(self.front_layer_size_list[idx],self.front_layer_size_list[idx+1]) for idx in range(self.front_layer_num-1) ])
+        self.last_layer = nn.Linear(hidden_layer_size_list[-1],output_size)
         self.use_dropout =  use_dropout
         self.dropout_ration = dropout_ration
+        self.use_batch_norm = use_batch_norm
         if self.use_dropout:
             self.dropout = nn.Dropout(p=self.dropout_ration)
 
+
     def forward(self,x):
-        x = F.relu(self.layer1(x))
-        if self.use_dropout:
-            x = self.dropout(x)
-        x = self.layer2(x)
+        for idx, layer in enumerate(self.layers):
+            if self.use_batch_norm:
+                bc = nn.BatchNorm1d(num_features=self.front_layer_size_list[idx+1])
+                x = F.relu(bc(layer(x)))
+            else:
+                x = F.relu(layer(x))
+            if self.use_dropout:
+                x = self.dropout(x)
+
+        x = self.last_layer(x)
         return F.softmax(x,dim=1)
 
     def accuracy(self, x , t):
@@ -40,7 +50,7 @@ class MultiLayerNet(nn.Module):
 
 if __name__ == '__main__':
     (x_train, t_train), (x_test, t_test) = load_mnist(normalize=True, one_hot_label=False)
-    network = MultiLayerNet(input_size=784, hidden_size=50, output_size=10,use_dropout=True)
+    network = MultiLayerNet(input_size=784, hidden_layer_size_list=[ 50], output_size=10)
     optimizer = optim.SGD(network.parameters(), lr=0.1,momentum=0.9)
     #optimizer = optim.Adam(network.parameters(),lr=0.001, betas=(0.9, 0.999), eps=1e-08)
 
