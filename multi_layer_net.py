@@ -5,6 +5,7 @@ import torch
 from torch.autograd import Variable
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.utils.data
 import torch.optim as optim
 import numpy as np
 
@@ -30,29 +31,27 @@ class MultiLayerNet(nn.Module):
         return accuracy
 
 
+
 if __name__ == '__main__':
     (x_train, t_train), (x_test, t_test) = load_mnist(normalize=True, one_hot_label=False)
     network = MultiLayerNet(input_size=784, hidden_size=50, output_size=10)
     optimizer = optim.SGD(network.parameters(), lr=0.1)
 
-    iters_num = 10000
-    train_size = x_train.shape[0]
-    batch_size = 100
+    train_ = torch.utils.data.TensorDataset(torch.from_numpy(x_train).float(), torch.from_numpy(t_train).long())
+    train_iter = torch.utils.data.DataLoader(train_, batch_size=100, shuffle=True)
     criterion = nn.CrossEntropyLoss()
 
-    for i in range(iters_num):
-        batch_mask = np.random.choice(train_size, batch_size)
-        x_batch = x_train[batch_mask]
-        t_batch = t_train[batch_mask]
-        optimizer.zero_grad()
-        x_t = Variable(torch.from_numpy(x_batch).float(), requires_grad=True)
-        t_t = Variable(torch.from_numpy(t_batch).long())
-        output = network(x_t)
-        loss = criterion(output, t_t)
-        loss.backward()
-        optimizer.step()
+    epoch_num = 10
+    for epoch in range(epoch_num):
+        for idx, data in enumerate(train_iter):
+            optimizer.zero_grad()
+
+            inputs, labels = data
+            inputs, labels = Variable(inputs,requires_grad=True),Variable(labels)
+            output = network(inputs)
+            loss = criterion(output, labels)
+            loss.backward()
+            optimizer.step()
 
     print('accuracy: {0}%'.format(network.accuracy(x_test,t_test)))
-
-
 

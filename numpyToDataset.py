@@ -1,8 +1,8 @@
 import torch.utils.data
 import numpy as np
 
-trainX = 10 * np.random.random((10,5))
-trainY = np.zeros((10,3))
+trainX = 10 * np.random.random((100,5))
+trainY = np.zeros((100,3))
 trainY[:,1] = 1
 
 ## trainX : numpy.ndarray ( 10 * 5 )
